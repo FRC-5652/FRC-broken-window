@@ -38,7 +38,9 @@ public class Robot extends SampleRobot {
 	private RobotDrive myRobot;
 	
 	// Joystick code
-	private Joystick stick;
+	private Joystick drive_stick;
+	private Joystick forklift_stick;
+	
 	// Joystick buttons
 	private Button btn_lift_up, btn_lift_down, btn_pneu_close, btn_pneu_open, btn_soft_mode;
 	private AtomicBoolean soft_touch_mode = new AtomicBoolean(false);
@@ -157,16 +159,28 @@ public class Robot extends SampleRobot {
 		 * https://wpilib.screenstepslive.com/s/3120/m/7912/l/133053-joysticks
 		 * 
 		 */
-		stick = new Joystick(0);
+		drive_stick = new Joystick(0);
 
-		btn_lift_up = new JoystickButton(stick, 1); // Lift up
-		btn_lift_down = new JoystickButton(stick, 2); // Lift down
+		btn_lift_up = new JoystickButton(drive_stick, 1); // Lift up
+		btn_lift_down = new JoystickButton(drive_stick, 2); // Lift down
 
-		btn_pneu_close = new JoystickButton(stick, 4); // pneumatic close
-		btn_pneu_open = new JoystickButton(stick, 6); // pneumatic open
+		btn_pneu_close = new JoystickButton(drive_stick, 4); // pneumatic close
+		btn_pneu_open = new JoystickButton(drive_stick, 6); // pneumatic open
 		
-		btn_soft_mode = new JoystickButton(stick,  12); // Soft touch mode
+		btn_soft_mode = new JoystickButton(drive_stick,  12); // Soft touch mode
 		
+		
+		/* Forklift joystick */	
+		try {
+			forklift_stick = new Joystick(1);
+		}
+		catch(Exception e) {
+			forklift_stick = null;
+			SmartDashboard.putString("forklift_stick", 
+					"EPIC FAILURE, NO STICK FOUND");
+		}
+
+		SmartDashboard.putString("forklift_stick", "Forklift stick activated");
 		
 		// Create vision object and thread
 		/*
@@ -372,22 +386,14 @@ public class Robot extends SampleRobot {
 	 * because it hit a limit switch.
 	 * TODO? Make it an interrupt, not a poll
 	 */
-	public void forklift_up() {
-		// Tween logic
-		int pwr_index;
-		double current_power;
-		pwr_index = fork_lift_tween(LIFT_STATES.UP);
-		
-		current_power = TWEEN_SLOW_THEN_FAST[pwr_index];		
-		
+	public void forklift_up(double power) {
 		if (!upperLimitSwitch.get()) {
-			motor_5.set(sensitivity * lift_power_up * current_power);
-			motor_6.set(sensitivity * -1 * lift_power_up * current_power);
-			motor_7.set(sensitivity * lift_power_up * current_power);
-			motor_8.set(sensitivity * -1 * lift_power_up * current_power);
+			motor_5.set( lift_power_up * power);
+			motor_6.set(sensitivity * -1 * lift_power_up * power);
+			motor_7.set(sensitivity * lift_power_up * power);
+			motor_8.set(sensitivity * -1 * lift_power_up * power);
 		}
 		
-		last_lift_state = LIFT_STATES.UP;
 		if (lowerLimitSwitch.get()) {
 			forklift_stop();
 		}
@@ -407,13 +413,7 @@ public class Robot extends SampleRobot {
 	 * 
 	 * TODO? Make it an interrupt, not a poll
 	 */
-	public void forklift_down() {
-		// Tween logic
-		int pwr_index;
-		double current_power;
-		pwr_index = fork_lift_tween(LIFT_STATES.DOWN);
-		
-		current_power = TWEEN_SLOW_THEN_FAST[pwr_index];
+	public void forklift_down(double current_power) {
 		
 		if (!lowerLimitSwitch.get()) {
 			motor_5.set( -1 * lift_power_down * current_power);
@@ -422,7 +422,7 @@ public class Robot extends SampleRobot {
 			motor_8.set( lift_power_down);
 		}
 		
-		last_lift_state = LIFT_STATES.DOWN;
+		//last_lift_state = LIFT_STATES.DOWN;
 		// Probably need this just in case
 		if (lowerLimitSwitch.get()) {
 			forklift_stop();
@@ -464,15 +464,30 @@ public class Robot extends SampleRobot {
 	}
 	
 	private void forklift_logic() {
-		// lifts fork lift up
-		if (btn_lift_up.get() == true && btn_lift_down.get() == false) {
-			forklift_up();
-		}
-		// brings fork lift down
-		else if (btn_lift_down.get() == true && btn_lift_up.get() == false) {
-			forklift_down();
+		if (forklift_stick != null){
+			// lifts fork lift up
+			if (btn_lift_up.get() == true && btn_lift_down.get() == false) {
+				forklift_up(1);
+			}
+			// brings fork lift down
+			else if (btn_lift_down.get() == true && btn_lift_up.get() == false) {
+				forklift_down(1);
+			} else {
+				forklift_stop();
+			}
 		} else {
-			forklift_stop();
+			double powah = forklift_stick.getY();
+			// I'm putting a dead zone for ~5%
+			if (powah > 0.05) {
+				forklift_up(powah);
+			}
+			else if (powah < -0.05) {
+				forklift_down(powah);
+			}
+			else { // Dead zone
+				forklift_stop();
+			}
+			
 		}
 
 		if (btn_pneu_close.get() == true && btn_pneu_open.get() == false) {
@@ -516,8 +531,8 @@ public class Robot extends SampleRobot {
 		SmartDashboard.putNumber("Solenoid bit faults", pneumatic_valve0.getPCMSolenoidBlackList());
 		SmartDashboard.putNumber("Solenoid bit status", pneumatic_valve0.getAll());
 		
-		SmartDashboard.putNumber("Stick POV", stick.getPOV());
-		SmartDashboard.putNumber("Stick throttle", stick.getThrottle());
+		SmartDashboard.putNumber("Stick POV", drive_stick.getPOV());
+		SmartDashboard.putNumber("Stick throttle", drive_stick.getThrottle());
 	}
 	
 	private void interval_logic() {
@@ -561,8 +576,8 @@ public class Robot extends SampleRobot {
 			
 			// I lowered the sensitivity of the Y axis 
 			// so the robot doesn't turn so fast anymore.
-			myRobot.arcadeDrive(sensitivity * stick.getY(), 
-								-1 * 0.5 * stick.getX());
+			myRobot.arcadeDrive(sensitivity * drive_stick.getY(), 
+								-1 * 0.5 * drive_stick.getX());
 			
 			// This needs to run all the time
 			soft_touch_logic();
