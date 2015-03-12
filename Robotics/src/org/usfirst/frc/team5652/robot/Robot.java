@@ -90,7 +90,7 @@ public class Robot extends SampleRobot {
 	private CameraServer camserver;
 	
 	// TWEENING variables
-	private boolean disable_tween = false;
+	private boolean disable_tween = true;
 	private long tween_last_seen = System.currentTimeMillis();
 	
 	static private enum LIFT_STATES  {STOP, UP, DOWN};
@@ -375,22 +375,22 @@ public class Robot extends SampleRobot {
 	public void forklift_up() {
 		// Tween logic
 		int pwr_index;
-		double current_power;
+		double current_power = 1.0;
 		pwr_index = fork_lift_tween(LIFT_STATES.UP);
 		
 		current_power = TWEEN_SLOW_THEN_FAST[pwr_index];		
 		
-		if (!upperLimitSwitch.get()) {
+		//if (!upperLimitSwitch.get()) {
 			motor_5.set(sensitivity * lift_power_up * current_power);
 			motor_6.set(sensitivity * -1 * lift_power_up * current_power);
 			motor_7.set(sensitivity * lift_power_up * current_power);
 			motor_8.set(sensitivity * -1 * lift_power_up * current_power);
-		}
+		//}
 		
 		last_lift_state = LIFT_STATES.UP;
-		if (lowerLimitSwitch.get()) {
+		//if (lowerLimitSwitch.get()) {
 			forklift_stop();
-		}
+		//}
 	}
 
 	/*
@@ -410,23 +410,23 @@ public class Robot extends SampleRobot {
 	public void forklift_down() {
 		// Tween logic
 		int pwr_index;
-		double current_power;
+		double current_power = 0.5;
 		pwr_index = fork_lift_tween(LIFT_STATES.DOWN);
 		
 		current_power = TWEEN_SLOW_THEN_FAST[pwr_index];
 		
-		if (!lowerLimitSwitch.get()) {
+		//if (!lowerLimitSwitch.get()) {
 			motor_5.set( -1 * lift_power_down * current_power);
 			motor_6.set( lift_power_down);
 			motor_7.set( -1 * lift_power_down * current_power);
 			motor_8.set( lift_power_down);
-		}
+		//}
 		
 		last_lift_state = LIFT_STATES.DOWN;
 		// Probably need this just in case
-		if (lowerLimitSwitch.get()) {
+//		if (lowerLimitSwitch.get()) {
 			forklift_stop();
-		}
+	//	}
 	}
 
 	public void forklift_stop() {
@@ -499,7 +499,7 @@ public class Robot extends SampleRobot {
 		else {
 			SmartDashboard.putString("SOFT_TOUCH", "DISABLED");
 		}
-		sensitivity = SmartDashboard.getNumber("SENSITIVITY");
+		//sensitivity = SmartDashboard.getNumber("SENSITIVITY");
 	}
 	
 	private void compressor_diagnostics() {
@@ -534,9 +534,9 @@ public class Robot extends SampleRobot {
 			
 			// ADD LOGIC HERE FOR DIAGNOSTICS
 			soft_touch_diagnostics();
-			compressor_diagnostics();
+			//compressor_diagnostics();
 			
-			auto_drive_power = SmartDashboard.getNumber("AUTO_DRIVE_POWER");
+			//auto_drive_power = SmartDashboard.getNumber("AUTO_DRIVE_POWER");
 
 
 			// If we want to do image processing. 
