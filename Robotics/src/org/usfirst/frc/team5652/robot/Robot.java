@@ -35,7 +35,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class Robot extends SampleRobot {
 	// Robot drive settings (tank drive)
-	private RobotDrive myRobot;
+	private DriveSystem drivetrain;
 	
 	// Joystick code
 	private Joystick drive_stick;
@@ -46,6 +46,7 @@ public class Robot extends SampleRobot {
 	private AtomicBoolean soft_touch_mode = new AtomicBoolean(false);
 	
 	// Limit switches for fork lift.
+	private final boolean digital_io_enabled = false;
 	private DigitalInput upperLimitSwitch = new LimitSwitch (0);
 	private DigitalInput lowerLimitSwitch = new LimitSwitch (1);
 	
@@ -91,42 +92,8 @@ public class Robot extends SampleRobot {
 	private Thread thread;
 	private CameraServer camserver;
 	
-	// TWEENING variables
-	private boolean disable_tween = false;
-	private long tween_last_seen = System.currentTimeMillis();
-	
-	static private enum LIFT_STATES  {STOP, UP, DOWN};
-	private LIFT_STATES last_lift_state = LIFT_STATES.STOP;
-	
-	
-	// LOWER THIS VALUE TO MODIFY THE TWEEN SPEED
-	private double period = 200; // 200 ms * 10 = 2 seconds
-	
-	// This is the tween hash table.
-	// sin(x) is computationally expensive so 
-	// made a pseudo waveform using a hash table.
-	// Each entry is a power value for the lift motors.
-	// MODIFY/TWEAK THESE VALUES!!
-	private static double[] TWEEN_SLOW_THEN_FAST = { 
-			0.20, // 0 * n ms 
-			0.20, 
-			0.25,
-			0.35,
-			0.45,
-			0.55, 
-			0.65,
-			0.75,
-			0.90,  
-			1.00  // 10 * n ms
-			};
-	
 	public Robot() {
-		// We have 2 motors per wheel
-		myRobot = new RobotDrive(0, 1);
 		
-		// Is 100 ms too little for a timeout?
-		// Should it be 1 second?
-		myRobot.setExpiration(0.1);
 		
 		// PDP setup
 		pdp = new PowerDistributionPanel();
@@ -160,6 +127,7 @@ public class Robot extends SampleRobot {
 		 * 
 		 */
 		drive_stick = new Joystick(0);
+		drivetrain = new DriveSystem(drive_stick);
 
 		btn_lift_up = new JoystickButton(drive_stick, 1); // Lift up
 		btn_lift_down = new JoystickButton(drive_stick, 2); // Lift down
@@ -208,171 +176,19 @@ public class Robot extends SampleRobot {
 		SmartDashboard.putNumber("AUTO_DRIVE_POWER", sensitivity);
 		
 	}
-
-	/*
-	 * Stop the robot drive system
-	 */
-	private void drive_stop(){
-		myRobot.drive(0, 0.0); 
-	}
-	
-	/*
-	 * For autonomous
-	 * Depends the auto_drive_power 
-	 */
-	private void drive_forward(double seconds){
-		myRobot.drive(-1 * auto_drive_power, 0.0); 
-		Timer.delay(seconds);
-		drive_stop();
-	}
-	
-	/*
-	 * For autonomous
-	 * Set your own power
-	 */
-	private void drive_forward(double power, double seconds){
-		myRobot.drive(-1 * power, 0.0); 
-		Timer.delay(seconds);
-		drive_stop();
-	}
-	
-	/*
-	 * For autonomous
-	 * Depends the auto_drive_power 
-	 */
-	private void drive_backwards(double seconds){
-		myRobot.drive(auto_drive_power, 0.0); 
-		Timer.delay(seconds);
-		drive_stop();
-	}
-	
-	/*
-	 * For autonomous
-	 * Set your own power
-	 */
-	private void drive_backwards(double power, double seconds){
-		myRobot.drive(power, 0.0); 
-		Timer.delay(seconds);
-		drive_stop();
-	}
-	
-	/*
-	 * For autonomous
-	 * Set your own power
-	 */
-	private void drive_rotate_left(double power, double seconds){
-		myRobot.drive(power, 1); 
-		Timer.delay(seconds);
-		drive_stop();
-	}
-	
-	/*
-	 * For autonomous
-	 * Set your own power
-	 */
-	private void drive_rotate_left(double seconds){
-		myRobot.drive(auto_drive_power, 1); 
-		Timer.delay(seconds);
-		drive_stop();
-	}
-	
-	/*
-	 * For autonomous
-	 * Set your own power
-	 */
-	private void drive_rotate_right(double seconds){
-		myRobot.drive(auto_drive_power, -1); 
-		Timer.delay(seconds);
-		drive_stop();
-	}
-	
-	/*
-	 * For autonomous
-	 * Set your own power
-	 */
-	private void drive_rotate_right(double power, double seconds){
-		myRobot.drive(power, -1); 
-		Timer.delay(seconds);
-		drive_stop();
-	}
 	
 	/**
 	 * Drive left & right motors for 2 seconds then stop
 	 */
 	public void autonomous() {
-		myRobot.setSafetyEnabled(false);
-		
-		// Open arm 
-		open_arm(); 
-		
-		// Disable arms 
-		disable_pneumaticvalves();
-		
-		// TODO: PLEASE EDIT THE AUTONOMOUS CODE!!
-		drive_forward(0.5, 1);
-		drive_rotate_right(0.4, 0.5);
-		drive_backwards(0.5,1);
-//		
-//		forklift_up();
-//		Timer.delay(0.5);
-//		forklift_stop();
-//
-//		drive_rotate_right(0.75, 4);
-//		
-//		drive_forward(0.5, 5);
-//
-//		forklift_down();
-//		Timer.delay(.3);
-//		forklift_stop();
-//		
-//		drive_backwards(0.5,3);
-//		
-//		drive_rotate_left(0.75, 4);
-//		
-//		drive_forward(0.5, 3);
 
-		myRobot.drive(0.0, 0.0); // stop robot
+		// Drive forward for 3 seconds.
+		// Enough to bring tote into auto zone.
+		drivetrain.forward(0.35, 3);
+		drivetrain.stop();
+
 	}
 	
-	/*
-	 * Tween logic
-	 * 
-	 * Check if the lift states has changed.
-	 * So if the operator released the trigger, 
-	 * 		The state is reset to STOP
-	 * If the operators holds it down and the states don't change
-	 * 		Then we check if 200 ms (may change) has elapsed 
-	 * 		since the last time we checked the button state. 
-	 * 
-	 * If 200 ms has elapsed, we then go and increment the index
-	 * while ensuring the index doesn't go over 9 (the current 
-	 * array size is of 10).
-	 * 
-	 * If none of these conditions are met, we return an index of 0. 
-	 * index is returned to the caller at the end of the method.
-	 * 
-	 */
-	private int fork_lift_tween(LIFT_STATES state_to_watch) {
-		int index = 0;
-		// If tween is disabled, just set it to Max value.
-		if (disable_tween == true){
-			return TWEEN_SLOW_THEN_FAST.length - 1;
-		}
-		
-		if (last_lift_state == state_to_watch) {
-			// tween_last_seen should be ok as a shared variable.
-			// last_lift_state should change and avoid entry here.
-			if (System.currentTimeMillis() - tween_last_seen > period){
-				index++;
-				if (index >= TWEEN_SLOW_THEN_FAST.length) {
-					index = TWEEN_SLOW_THEN_FAST.length - 1;
-				}
-				tween_last_seen = System.currentTimeMillis();
-			}
-		} 
-		
-		return index;
-	}
 
 	/*
 	 * Code to lift the fork up
@@ -386,15 +202,19 @@ public class Robot extends SampleRobot {
 	 * because it hit a limit switch.
 	 * TODO? Make it an interrupt, not a poll
 	 */
+	@SuppressWarnings("unused")
 	public void forklift_up(double power) {
-		if (!upperLimitSwitch.get()) {
+		// Check limit switch if digitalio enabled.
+		if (!upperLimitSwitch.get() || 
+				!digital_io_enabled) {
 			motor_5.set( lift_power_up * power);
 			motor_6.set(sensitivity * -1 * lift_power_up * power);
 			motor_7.set(sensitivity * lift_power_up * power);
 			motor_8.set(sensitivity * -1 * lift_power_up * power);
 		}
 		
-		if (lowerLimitSwitch.get()) {
+		if (upperLimitSwitch.get() && 
+				digital_io_enabled) {
 			forklift_stop();
 		}
 	}
@@ -413,18 +233,18 @@ public class Robot extends SampleRobot {
 	 * 
 	 * TODO? Make it an interrupt, not a poll
 	 */
+	@SuppressWarnings("unused")
 	public void forklift_down(double current_power) {
-		
-		if (!lowerLimitSwitch.get()) {
+		// Check limit switch only if dio enabled.
+		if (!lowerLimitSwitch.get() ||
+				!digital_io_enabled) {
 			motor_5.set( -1 * lift_power_down * current_power);
 			motor_6.set( lift_power_down);
 			motor_7.set( -1 * lift_power_down * current_power);
 			motor_8.set( lift_power_down);
 		}
-		
-		//last_lift_state = LIFT_STATES.DOWN;
 		// Probably need this just in case
-		if (lowerLimitSwitch.get()) {
+		if (lowerLimitSwitch.get() && digital_io_enabled) {
 			forklift_stop();
 		}
 	}
@@ -434,7 +254,6 @@ public class Robot extends SampleRobot {
 		motor_6.set(lift_power_stop);
 		motor_7.set(lift_power_stop);
 		motor_8.set(lift_power_stop);
-		last_lift_state = LIFT_STATES.STOP;
 	}
 /* 
  * Let x be pneumatic valve 0 and let y pneumatic valve 1 be y 
@@ -570,18 +389,13 @@ public class Robot extends SampleRobot {
 	 * Runs the motors with arcade steering.
 	 */
 	public void operatorControl() {
-		myRobot.setSafetyEnabled(true);
 		while (isOperatorControl() && isEnabled()) {
 			profiler_start = System.currentTimeMillis();
-			
-			// I lowered the sensitivity of the Y axis 
-			// so the robot doesn't turn so fast anymore.
-			myRobot.arcadeDrive(sensitivity * drive_stick.getY(), 
-								-1 * 0.5 * drive_stick.getX());
 			
 			// This needs to run all the time
 			soft_touch_logic();
 			forklift_logic();
+			drivetrain.run();
 			
 			// The following runs occasionally.
 			interval_logic();

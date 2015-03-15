@@ -47,7 +47,7 @@ public class DriveSystem {
 	/* call this when you want this object to wake up 
 	 * and use the joystick values to drive the drive train.
 	 */
-	public void checkInputs(){
+	public void run(){
 		drivetrain.arcadeDrive(sensitivity * joystick.getY(), 
 				-1 * DEFAULT_ROTATE_PWD * joystick.getX());
 	}
