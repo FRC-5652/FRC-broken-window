@@ -228,27 +228,10 @@ public class Robot extends SampleRobot {
 	public void autonomous() {
 		myRobot.setSafetyEnabled(false);
 		
-		drive_forward(0.5, 0.5);
 		
-		forklift_up();
-		Timer.delay(0.5);
-		forklift_stop();
+		drive_backwards(0.35, 3.5);
+		drive_stop();
 
-		drive_rotate_right(0.75, 4);
-		
-		drive_forward(0.5, 5);
-
-		forklift_down();
-		Timer.delay(.3);
-		forklift_stop();
-		
-		drive_backwards(0.5,3);
-		
-		drive_rotate_left(0.75, 4);
-		
-		drive_forward(0.5, 3);
-
-		myRobot.drive(0.0, 0.0); // stop robot
 	}
 
 	public void forklift_up() {
